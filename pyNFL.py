@@ -23,6 +23,10 @@ from Teams import Teams
 from Create_Draft_Players import Draft
 from Create_FA_Players import FreeAgent
 from Show_Edit_Draft import View_Draft
+from Conferences import View_Conferences
+from Divisions import View_Divisions
+from Team_Mgmt import Manage_Teams
+from Write_Games import Write_Games
 
 
 
@@ -194,13 +198,19 @@ class MainWindow(QMainWindow):
           self.sched_list.clear()
           cursor.execute(f"select team_id from teams where name = '{team}';")
           teamID = cursor.fetchone()[0]
-          cursor.execute(f"""select week, home_team, away_team from schedule
+          qry = f"""select week, home_team, away_team from schedule
                              where home_id = {teamID} or away_id = {teamID}
-                             order by week;""")
+                             order by week;"""
+          cursor.execute(qry)
+          print(qry)
           sched = cursor.fetchall()
           for week in sched:
               wk,hteam,ateam = week
-              sch = f"Week: {wk}  {ateam} @ {hteam}"
+              if hteam == team:
+                  sch = f"Week {wk}: {ateam}"
+              else:
+                  sch = f"Week {wk}: @ {hteam}"
+                   
               self.sched_list.addItem(QListWidgetItem(sch))
           con.close()
 
@@ -217,24 +227,28 @@ class MainWindow(QMainWindow):
         #########################################################
         # Team Menu Options
         # Creating menus using a title
-        # Menu: League
+        # Menu: Games
         self.font.setPointSize(18)
-        leagueMenu = menuBar.addMenu("League")
-        leagueMenu.setFont(self.font)
+        gamesMenu = menuBar.addMenu("Games")
+        gamesMenu.setFont(self.font)
 
-        # Menu:  League -> Teams
-        teamsubMenu = leagueMenu.addMenu("Teams")
-        teamsubMenu.setFont(self.font)
-
-        # Menu: League -> Teams -> Load Team
-        ldteamAct = QAction("Load Team", self)
-        teamsubMenu.addAction(ldteamAct)
-        ldteamAct.triggered.connect(self.load_team)
-
-        # Menu: League -> Teams -> Write Team
+        # Menu: League ->  Write Team
         wrteamAct = QAction("Write Team", self)
-        teamsubMenu.addAction(wrteamAct)
+        gamesMenu.addAction(wrteamAct)
         wrteamAct.triggered.connect(self.write_team)
+
+        # Menu: League -> Write NFL Challenge games file
+        wrmatchAct = QAction("Write NFL Challenge Weekly Schedule", self)
+        gamesMenu.addAction(wrmatchAct)
+        wrmatchAct.triggered.connect(self.write_match)
+
+        # Menu: League -> Load Results
+        wrsubldRes = QAction("Load Results", self)
+        gamesMenu.addAction(wrsubldRes)
+        wrsubldRes.triggered.connect(self.load_results)
+
+
+
      #################################################################
 
         # Menu: Roster
@@ -249,14 +263,16 @@ class MainWindow(QMainWindow):
 
 #################################################################
         # Menu: Conferences
-        leagueMenu.addAction("Conferences")
-        divsubMenu = leagueMenu.addMenu("Divisions")
-        divsubMenu.setFont(self.font)
+        #leagueMenu.addAction("Conferences")
 
-        divsubMenu.addAction("Add Division")
 
-        divsubMenu.addAction("Edit Division")
-        divsubMenu.addAction("Delete Division")
+        #divsubMenu = leagueMenu.addMenu("Divisions")
+        #divsubMenu.setFont(self.font)
+
+        #divsubMenu.addAction("Add Division")
+
+        #divsubMenu.addAction("Edit Division")
+        #divsubMenu.addAction("Delete Division")
 
  #################################################################
      # Menu:  GM/Owner
@@ -307,28 +323,34 @@ class MainWindow(QMainWindow):
         # Menu: Commissioner
         commMenu = menuBar.addMenu("Commissioner")
         commMenu.setFont(self.font)
+
+        ##########################################################
         # Menu: Commissioner -> Alter League
-        commsubMenu = menuBar.addMenu("Alter League")
+        ##########################################################
+        commAltersubMenu = commMenu.addMenu("Alter League")
+        commAltersubMenu.setFont(self.font)
 
-        # Menu: Commissioner -> Teams
-        comteamsubMenu = commMenu.addMenu("Team")
-        comteamsubMenu.setFont(self.font)
+        # Menu: Commissioner -> Alter League -> Modify Conferences
+        alterconfAct = QAction("Modify Conferences",self)
+        commAltersubMenu.addAction(alterconfAct)
+        alterconfAct.triggered.connect(self.view_conferences)
+    
+        # Menu: Commissioner -> Alter League -> Modify Divisions
+        alterdivAct = QAction("Modify Divisions",self)
+        commAltersubMenu.addAction(alterdivAct)
+        alterdivAct.triggered.connect(self.view_divisions)
 
-        # Menu: Commissioner -> Team -> Add Team
-        addteamAct = QAction("Add Team",self)
-        comteamsubMenu.addAction(addteamAct)
-        #addteamAct.triggered.connect(self.add_team)
-
-        # Menu: Commissioner -> Team -> Modify Team
-        edteamAct = QAction("Edit Team", self)
-        comteamsubMenu.addAction(edteamAct)
-        edteamAct.triggered.connect(self.edit_team)
-
-        # Menu: Commissioner -> Team -> Delete Team
-        delteamAct = QAction("Delete Team", self)
-        comteamsubMenu.addAction(delteamAct)
-        delteamAct.triggered.connect(self.delete_team)
-
+        # Menu: Commissioner -> Load Team
+        ldteamAct = QAction("Load Team", self)
+        commAltersubMenu.addAction(ldteamAct)
+        ldteamAct.triggered.connect(self.load_team)
+    
+    
+        # Menu: Commissioner -> Alter League -> Modify Teams
+        alterTeamAct = QAction("Modify Teams",self)
+        commAltersubMenu.addAction(alterTeamAct)
+        alterTeamAct.triggered.connect(self.manage_teams)
+        ##########################################################
 
         # Menu: Commissioner -> Modify Season
         commMenu.addAction("Modify Season")
@@ -449,6 +471,20 @@ class MainWindow(QMainWindow):
         w.exec_()
 
 
+    def write_match(self):
+        #w = QDialog(self)
+        #w.resize(640,480)
+        #w.setWindowTitle("Write NFL Challenge Matchups")
+        Write_Games()
+        #w.exec_()
+
+    def load_results(self):
+        w = QDialog(self)
+        w.resize(640,480)
+        w.setWindowTitle("Load NFL Challenge Results")
+        w.exec_()
+
+
     def load_team(self):
         Teams.Load_Team(self)
 
@@ -463,6 +499,18 @@ class MainWindow(QMainWindow):
 
     def view_draft(self):
         self.view_win = View_Draft()
+        self.view_win.show()
+
+    def view_conferences(self):
+        self.view_win = View_Conferences()
+        self.view_win.show()
+
+    def view_divisions(self):
+        self.view_win = View_Divisions()
+        self.view_win.show()
+
+    def manage_teams(self):
+        self.view_win = Manage_Teams()
         self.view_win.show()
 
     def select_the_team(self):
@@ -485,29 +533,29 @@ class MainWindow(QMainWindow):
         self.window.show()
 
 
-    def conference(self):
-        w = QDialog(self)
-        w.resize(640,480)
-        w.setWindowTitle("Conference")
-        w.exec_()
+ #   def conference(self):
+ #       w = QDialog(self)
+ #       w.resize(640,480)
+ #       w.setWindowTitle("Conference")
+ #       w.exec_()
 
-    def add_division(self):
-        w = QDialog(self)
-        w.resize(640,480)
-        w.setWindowTitle("Add Division")
-        w.exec_()
-
-    def edit_division(self):
-        w = QDialog(self)
-        w.resize(640,480)
-        w.setWindowTitle("Edit Division")
-        w.exec_()
-
-    def delete_division(self):
-        w = QDialog(self)
-        w.resize(640,480)
-        w.setWindowTitle("Delete Division")
-        w.exec_()
+ #   def add_division(self):
+ #       w = QDialog(self)
+ #       w.resize(640,480)
+ #       w.setWindowTitle("Add Division")
+ #       w.exec_()
+#
+#    def edit_division(self):
+#        w = QDialog(self)
+#        w.resize(640,480)
+#        w.setWindowTitle("Edit Division")
+#        w.exec_()
+#
+#    def delete_division(self):
+#        w = QDialog(self)
+#        w.resize(640,480)
+#        w.setWindowTitle("Delete Division")
+#        w.exec_()
 
     def cut_player(self):
         w = QDialog(self)
@@ -589,7 +637,7 @@ def show_standings(self):
     #self.team_list.addItem(QListWidgetItem("""This is a team."""))
     self.team_list.clear()
     self.font = QFont()
-    self.font.setPointSize(14)
+    self.font.setPointSize(15)
     self.font.setFamily("Courier New")
     self.team_list.setFont(self.font)
     connection = sqlite3.connect("pyNFL.db")
