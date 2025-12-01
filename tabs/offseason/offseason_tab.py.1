@@ -1,0 +1,681 @@
+# ========================================
+# tabs/offseason/offseason_tab.py
+# Version: 2.0
+# Path: tabs/offseason/offseason_tab.py
+# ========================================
+
+"""
+Offseason Management Tab Module
+
+Season transition workflow including player aging, skill updates,
+retirements, rookie generation, draft preparation, and season advancement.
+
+Features:
+- Phase 1: Season Finalization (Archive Season, Calculate Awards)
+- Phase 2: Player Management (Age, Skills, Retirements)
+- Phase 3: Draft Preparation (Rookie Class, Draft Order)
+- Phase 4: Season Start (Conduct Draft, Generate Schedule)
+"""
+
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                            QPushButton, QGroupBox, QMessageBox, QScrollArea,
+                            QFrame)
+from PyQt5.QtCore import Qt
+from datetime import datetime
+
+
+class OffseasonTab(QWidget):
+    """Offseason management tab - season transition workflow"""
+    
+    def __init__(self, db_manager):
+        super().__init__()
+        self.db_manager = db_manager
+        self.current_league_id = None
+        self.current_season = 1
+        self.season_archived = False
+        self.init_ui()
+        self.load_season_status()
+        
+    def init_ui(self):
+        """Initialize offseason tab UI"""
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Title
+        title = QLabel("Offseason Management")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 10px;")
+        main_layout.addWidget(title)
+        
+        # Scroll area for content
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setSpacing(15)
+        
+        # Season Status Card
+        self.status_card = self.create_status_card()
+        scroll_layout.addWidget(self.status_card)
+        
+        # Phase 1: Season Finalization
+        phase1 = self.create_phase1_group()
+        scroll_layout.addWidget(phase1)
+        
+        # Phase 2: Player Management
+        phase2 = self.create_phase2_group()
+        scroll_layout.addWidget(phase2)
+        
+        # Phase 3: Draft Preparation
+        phase3 = self.create_phase3_group()
+        scroll_layout.addWidget(phase3)
+        
+        # Phase 4: Season Start
+        phase4 = self.create_phase4_group()
+        scroll_layout.addWidget(phase4)
+        
+        scroll_layout.addStretch()
+        
+        scroll.setWidget(scroll_widget)
+        main_layout.addWidget(scroll)
+    
+    def create_status_card(self):
+        """Create season status display card"""
+        card = QGroupBox("Current Season Status")
+        card.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #3498db;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding: 15px;
+                background-color: #ecf0f1;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        
+        layout = QVBoxLayout(card)
+        
+        # Season info
+        self.season_label = QLabel("Season: Loading...")
+        self.season_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
+        layout.addWidget(self.season_label)
+        
+        # Status info
+        self.status_label = QLabel("Status: Loading...")
+        self.status_label.setStyleSheet("font-size: 14px; color: #34495e; margin-top: 5px;")
+        layout.addWidget(self.status_label)
+        
+        # Championship info
+        self.champion_label = QLabel("")
+        self.champion_label.setStyleSheet("font-size: 13px; color: #27ae60; margin-top: 5px;")
+        layout.addWidget(self.champion_label)
+        
+        return card
+    
+    def create_phase1_group(self):
+        """Create Phase 1: Season Finalization group"""
+        group = QGroupBox("Phase 1: Season Finalization")
+        group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #2ecc71;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #27ae60;
+            }
+        """)
+        
+        layout = QVBoxLayout(group)
+        
+        # Archive Season Button
+        self.archive_btn = QPushButton("🏆 Archive Season & Create Historical Record")
+        self.archive_btn.setToolTip("Save championship results and prepare for next season")
+        self.archive_btn.clicked.connect(self.archive_season)
+        self.archive_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                padding: 12px;
+                border: none;
+                border-radius: 5px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #229954;
+            }
+            QPushButton:pressed {
+                background-color: #1e8449;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+                color: #ecf0f1;
+            }
+        """)
+        layout.addWidget(self.archive_btn)
+        
+        desc = QLabel("Creates a permanent record of the season champion and statistics")
+        desc.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px; margin-bottom: 10px;")
+        layout.addWidget(desc)
+        
+        # Calculate Awards Button (Stub)
+        awards_btn = QPushButton("🏅 Calculate Season Awards (MVP, OPOY, DPOY)")
+        awards_btn.setToolTip("To be implemented - Calculate season awards")
+        awards_btn.clicked.connect(lambda: self.show_stub_message("Calculate Season Awards"))
+        awards_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                padding: 12px;
+                border: none;
+                border-radius: 5px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #21618c;
+            }
+        """)
+        layout.addWidget(awards_btn)
+        
+        desc2 = QLabel("Optional: Determine MVP and other award winners")
+        desc2.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px;")
+        layout.addWidget(desc2)
+        
+        return group
+    
+    def create_phase2_group(self):
+        """Create Phase 2: Player Management group"""
+        group = QGroupBox("Phase 2: Player Management")
+        group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #e67e22;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #d35400;
+            }
+        """)
+        
+        layout = QVBoxLayout(group)
+        
+        # Age Players Button (Stub)
+        age_btn = QPushButton("📅 Age Players (+1 Year)")
+        age_btn.setToolTip("To be implemented - Add one year to all player ages")
+        age_btn.clicked.connect(lambda: self.show_stub_message("Age Players"))
+        age_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(age_btn)
+        
+        desc1 = QLabel("Add one year to all player ages and experience")
+        desc1.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px; margin-bottom: 10px;")
+        layout.addWidget(desc1)
+        
+        # Update Skills Button (Stub)
+        skills_btn = QPushButton("📈 Update Player Skills (Progression/Regression)")
+        skills_btn.setToolTip("To be implemented - Apply age-based skill changes")
+        skills_btn.clicked.connect(lambda: self.show_stub_message("Update Player Skills"))
+        skills_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(skills_btn)
+        
+        desc2 = QLabel("Apply progression curves for young players, regression for veterans")
+        desc2.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px; margin-bottom: 10px;")
+        layout.addWidget(desc2)
+        
+        # Process Retirements Button (Stub)
+        retire_btn = QPushButton("👴 Process Retirements")
+        retire_btn.setToolTip("To be implemented - Retire eligible players")
+        retire_btn.clicked.connect(lambda: self.show_stub_message("Process Retirements"))
+        retire_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(retire_btn)
+        
+        desc3 = QLabel("Automatically retire players based on age and performance")
+        desc3.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px;")
+        layout.addWidget(desc3)
+        
+        return group
+    
+    def create_phase3_group(self):
+        """Create Phase 3: Draft Preparation group"""
+        group = QGroupBox("Phase 3: Draft Preparation")
+        group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #9b59b6;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #8e44ad;
+            }
+        """)
+        
+        layout = QVBoxLayout(group)
+        
+        # Generate Rookies Button (Stub)
+        rookies_btn = QPushButton("👶 Generate Rookie Class")
+        rookies_btn.setToolTip("To be implemented - Create draft prospects")
+        rookies_btn.clicked.connect(lambda: self.show_stub_message("Generate Rookie Class"))
+        rookies_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(rookies_btn)
+        
+        desc1 = QLabel("Create new draft prospects with randomized ratings and attributes")
+        desc1.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px; margin-bottom: 10px;")
+        layout.addWidget(desc1)
+        
+        # Calculate Draft Order Button (Stub)
+        draft_order_btn = QPushButton("📋 Calculate Draft Order")
+        draft_order_btn.setToolTip("To be implemented - Determine draft pick order")
+        draft_order_btn.clicked.connect(lambda: self.show_stub_message("Calculate Draft Order"))
+        draft_order_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(draft_order_btn)
+        
+        desc2 = QLabel("Set draft order based on previous season standings (worst to best)")
+        desc2.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px;")
+        layout.addWidget(desc2)
+        
+        return group
+    
+    def create_phase4_group(self):
+        """Create Phase 4: Season Start group"""
+        group = QGroupBox("Phase 4: Season Start")
+        group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #e74c3c;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #c0392b;
+            }
+        """)
+        
+        layout = QVBoxLayout(group)
+        
+        # Conduct Draft Button (Stub)
+        draft_btn = QPushButton("🎯 Conduct Draft")
+        draft_btn.setToolTip("To be implemented - Run draft simulation")
+        draft_btn.clicked.connect(lambda: self.show_stub_message("Conduct Draft"))
+        draft_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(draft_btn)
+        
+        desc1 = QLabel("Execute the draft - teams select players from rookie class")
+        desc1.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px; margin-bottom: 10px;")
+        layout.addWidget(desc1)
+        
+        # Generate Schedule Button (Stub)
+        schedule_btn = QPushButton("📅 Generate New Season Schedule")
+        schedule_btn.setToolTip("To be implemented - Create schedule for new season")
+        schedule_btn.clicked.connect(lambda: self.show_stub_message("Generate Schedule"))
+        schedule_btn.setStyleSheet(self.get_stub_button_style())
+        layout.addWidget(schedule_btn)
+        
+        desc2 = QLabel("Create game schedule for the upcoming season")
+        desc2.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-left: 5px;")
+        layout.addWidget(desc2)
+        
+        return group
+    
+    def get_stub_button_style(self):
+        """Get standard style for stub buttons"""
+        return """
+            QPushButton {
+                background-color: #95a5a6;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                padding: 12px;
+                border: none;
+                border-radius: 5px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #7f8c8d;
+            }
+            QPushButton:pressed {
+                background-color: #6c7a89;
+            }
+        """
+    
+    def load_season_status(self):
+        """Load current season status and update UI"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Get current league and season
+            cursor.execute("""
+                SELECT league_id, league_name, current_season, current_week
+                FROM leagues 
+                WHERE is_active = TRUE 
+                LIMIT 1
+            """)
+            
+            league = cursor.fetchone()
+            if not league:
+                self.season_label.setText("Season: No active league found")
+                self.status_label.setText("Status: Please create a league first")
+                self.archive_btn.setEnabled(False)
+                return
+            
+            self.current_league_id = league['league_id']
+            self.current_season = league['current_season']
+            
+            self.season_label.setText(f"Season: {self.current_season}")
+            
+            # Check if season already archived
+            cursor.execute("""
+                SELECT season_id, superbowl_winner_team_id, superbowl_loser_team_id,
+                       superbowl_score_winner, superbowl_score_loser
+                FROM seasons 
+                WHERE league_id = ? AND season_number = ?
+            """, (self.current_league_id, self.current_season))
+            
+            archived = cursor.fetchone()
+            
+            if archived and archived['superbowl_winner_team_id']:
+                self.season_archived = True
+                self.status_label.setText("Status: ✓ Season Archived")
+                self.status_label.setStyleSheet("font-size: 14px; color: #27ae60; margin-top: 5px; font-weight: bold;")
+                
+                # Get champion name
+                cursor.execute("""
+                    SELECT full_name, abbreviation 
+                    FROM teams 
+                    WHERE team_id = ?
+                """, (archived['superbowl_winner_team_id'],))
+                winner = cursor.fetchone()
+                
+                cursor.execute("""
+                    SELECT full_name, abbreviation 
+                    FROM teams 
+                    WHERE team_id = ?
+                """, (archived['superbowl_loser_team_id'],))
+                loser = cursor.fetchone()
+                
+                if winner and loser:
+                    self.champion_label.setText(
+                        f"🏆 Champion: {winner['full_name']} ({archived['superbowl_score_winner']}) "
+                        f"def. {loser['full_name']} ({archived['superbowl_score_loser']})"
+                    )
+                    self.archive_btn.setText("🔄 Re-Archive Season (Update Record)")
+            else:
+                # Check if Super Bowl has been played
+                cursor.execute("""
+                    SELECT game_id, home_team_id, away_team_id, home_score, away_score, game_status
+                    FROM games
+                    WHERE league_id = ? AND season = ? AND game_type = 'SUPERBOWL'
+                """, (self.current_league_id, self.current_season))
+                
+                superbowl = cursor.fetchone()
+                
+                if superbowl and superbowl['game_status'] == 'COMPLETED':
+                    self.season_archived = False
+                    self.status_label.setText("Status: ✓ Super Bowl Complete - Ready to Archive")
+                    self.status_label.setStyleSheet("font-size: 14px; color: #f39c12; margin-top: 5px; font-weight: bold;")
+                    self.archive_btn.setEnabled(True)
+                    
+                    # Show who won
+                    winner_id = superbowl['home_team_id'] if superbowl['home_score'] > superbowl['away_score'] else superbowl['away_team_id']
+                    cursor.execute("SELECT full_name FROM teams WHERE team_id = ?", (winner_id,))
+                    winner = cursor.fetchone()
+                    if winner:
+                        self.champion_label.setText(f"🏆 Super Bowl Winner: {winner['full_name']}")
+                else:
+                    self.season_archived = False
+                    self.status_label.setText("Status: Season In Progress")
+                    self.status_label.setStyleSheet("font-size: 14px; color: #e74c3c; margin-top: 5px;")
+                    self.champion_label.setText("⚠️ Complete Super Bowl before archiving season")
+                    self.archive_btn.setEnabled(False)
+                    self.archive_btn.setToolTip("Complete the Super Bowl first")
+            
+        except Exception as e:
+            print(f"Error loading season status: {e}")
+            self.status_label.setText(f"Status: Error loading data - {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    def archive_season(self):
+        """Archive the current season - create historical record"""
+        try:
+            conn = self.db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if already archived
+            cursor.execute("""
+                SELECT season_id 
+                FROM seasons 
+                WHERE league_id = ? AND season_number = ?
+            """, (self.current_league_id, self.current_season))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Ask if user wants to re-archive
+                reply = QMessageBox.question(
+                    self,
+                    "Season Already Archived",
+                    f"Season {self.current_season} has already been archived.\n\n"
+                    "Do you want to clear the existing record and re-archive?\n"
+                    "(This will update the championship information)",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if reply == QMessageBox.No:
+                    return
+                
+                # Delete existing record
+                cursor.execute("DELETE FROM seasons WHERE season_id = ?", (existing['season_id'],))
+                print(f"[OFFSEASON] Deleted existing season record for Season {self.current_season}")
+            
+            # Find Super Bowl game
+            cursor.execute("""
+                SELECT game_id, home_team_id, away_team_id, home_score, away_score, game_status
+                FROM games
+                WHERE league_id = ? AND season = ? AND game_type = 'SUPERBOWL'
+            """, (self.current_league_id, self.current_season))
+            
+            superbowl = cursor.fetchone()
+            
+            if not superbowl:
+                QMessageBox.warning(
+                    self,
+                    "No Super Bowl Found",
+                    f"No Super Bowl game found for Season {self.current_season}.\n\n"
+                    "Generate playoff games first."
+                )
+                return
+            
+            if superbowl['game_status'] != 'COMPLETED':
+                QMessageBox.warning(
+                    self,
+                    "Super Bowl Not Complete",
+                    f"The Super Bowl has not been completed yet.\n\n"
+                    "Play the Super Bowl game before archiving the season."
+                )
+                return
+            
+            # Determine winner and loser
+            if superbowl['home_score'] > superbowl['away_score']:
+                winner_id = superbowl['home_team_id']
+                loser_id = superbowl['away_team_id']
+                winner_score = superbowl['home_score']
+                loser_score = superbowl['away_score']
+            else:
+                winner_id = superbowl['away_team_id']
+                loser_id = superbowl['home_team_id']
+                winner_score = superbowl['away_score']
+                loser_score = superbowl['home_score']
+            
+            # Get team names for confirmation
+            cursor.execute("SELECT full_name, abbreviation FROM teams WHERE team_id = ?", (winner_id,))
+            winner = cursor.fetchone()
+            cursor.execute("SELECT full_name, abbreviation FROM teams WHERE team_id = ?", (loser_id,))
+            loser = cursor.fetchone()
+            
+            # Confirm with user
+            reply = QMessageBox.question(
+                self,
+                "Archive Season?",
+                f"Archive Season {self.current_season}?\n\n"
+                f"🏆 Champion: {winner['full_name']} ({winner_score})\n"
+                f"🥈 Runner-up: {loser['full_name']} ({loser_score})\n\n"
+                f"This will create a permanent historical record.\n"
+                f"Ready to advance to Season {self.current_season + 1}?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.No:
+                return
+            
+            # Calculate season statistics
+            cursor.execute("""
+                SELECT COUNT(*) as total_games 
+                FROM games 
+                WHERE league_id = ? AND season = ? AND game_status = 'COMPLETED'
+            """, (self.current_league_id, self.current_season))
+            stats = cursor.fetchone()
+            total_games = stats['total_games'] if stats else 0
+            
+            # Find highest scoring game
+            cursor.execute("""
+                SELECT game_id, (home_score + away_score) as total_points
+                FROM games
+                WHERE league_id = ? AND season = ? AND game_status = 'COMPLETED'
+                ORDER BY total_points DESC
+                LIMIT 1
+            """, (self.current_league_id, self.current_season))
+            highest_game = cursor.fetchone()
+            highest_scoring_game_id = highest_game['game_id'] if highest_game else None
+            
+            # Find team with most wins
+            cursor.execute("""
+                SELECT team_id, COUNT(*) as wins
+                FROM (
+                    SELECT home_team_id as team_id
+                    FROM games
+                    WHERE league_id = ? AND season = ? 
+                      AND game_status = 'COMPLETED'
+                      AND game_type = 'REGULAR'
+                      AND home_score > away_score
+                    UNION ALL
+                    SELECT away_team_id as team_id
+                    FROM games
+                    WHERE league_id = ? AND season = ?
+                      AND game_status = 'COMPLETED'
+                      AND game_type = 'REGULAR'
+                      AND away_score > home_score
+                )
+                GROUP BY team_id
+                ORDER BY wins DESC
+                LIMIT 1
+            """, (self.current_league_id, self.current_season, 
+                  self.current_league_id, self.current_season))
+            most_wins = cursor.fetchone()
+            most_wins_team_id = most_wins['team_id'] if most_wins else None
+            most_wins_count = most_wins['wins'] if most_wins else 0
+            
+            # Insert season record
+            cursor.execute("""
+                INSERT INTO seasons (
+                    league_id, season_number, season_status,
+                    superbowl_winner_team_id, superbowl_loser_team_id,
+                    superbowl_score_winner, superbowl_score_loser,
+                    superbowl_game_id,
+                    total_games_played,
+                    highest_scoring_game_id,
+                    most_wins_team_id,
+                    most_wins_count,
+                    season_end_date,
+                    archived_date
+                ) VALUES (?, ?, 'COMPLETE', ?, ?, ?, ?, ?, ?, ?, ?, ?, DATE('now'), DATETIME('now'))
+            """, (
+                self.current_league_id, self.current_season,
+                winner_id, loser_id, winner_score, loser_score,
+                superbowl['game_id'],
+                total_games,
+                highest_scoring_game_id,
+                most_wins_team_id,
+                most_wins_count
+            ))
+            
+            conn.commit()
+            
+            print(f"[OFFSEASON] ✓ Season {self.current_season} archived successfully!")
+            print(f"[OFFSEASON]   Champion: {winner['full_name']} ({winner_score}-{loser_score})")
+            print(f"[OFFSEASON]   Total Games: {total_games}")
+            
+            # Refresh UI
+            self.load_season_status()
+            
+            # Success message
+            QMessageBox.information(
+                self,
+                "Season Archived!",
+                f"Season {self.current_season} has been archived!\n\n"
+                f"🏆 Champion: {winner['full_name']}\n"
+                f"📊 Games Played: {total_games}\n\n"
+                f"You can now proceed with offseason tasks.\n"
+                f"When ready, generate schedule for Season {self.current_season + 1}."
+            )
+            
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(
+                self,
+                "Archive Error",
+                f"Error archiving season:\n\n{str(e)}"
+            )
+            print(f"[OFFSEASON] Error archiving season: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            if conn:
+                conn.close()
+    
+    def show_stub_message(self, feature_name):
+        """Show placeholder message for stub features"""
+        QMessageBox.information(
+            self,
+            "Feature Coming Soon",
+            f"{feature_name} will be implemented in a future update.\n\n"
+            "This feature is currently under development."
+        )
